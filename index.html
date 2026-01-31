@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameBlog</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
+    }
+
+    header {
+      padding: 20px;
+      text-align: center;
+      background: #111;
+      border-bottom: 2px solid #00ffcc;
+    }
+
+    h1 {
+      margin: 0;
+      color: #00ffcc;
+    }
+
+    .container {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0,255,204,0.15);
+      transition: transform 0.2s;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      color: #00ffcc;
+    }
+
+    .date {
+      font-size: 12px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎮 GameBlog</h1>
+  <p>Oyun dünyasından en güncel yazılar</p>
+</header>
+<div style="padding:20px; text-align:center;">
+  <input id="searchInput" placeholder="🔍 Yazı ara..."
+    style="padding:10px; width:60%; max-width:300px; border-radius:8px; border:none;" />
+
+  <select id="categoryFilter"
+    style="padding:10px; margin-left:10px; border-radius:8px; border:none;">
+    <option value="All">Tümü</option>
+    <option value="Genel">Genel</option>
+    <option value="FPS">FPS</option>
+    <option value="RPG">RPG</option>
+    <option value="Indie">Indie</option>
+  </select>
+</div>
+
+<main class="container" id="posts"></main>
+
+<script type="module">
+  import { db } from "./firebase.js";
+  import { collection, getDocs, query, orderBy } from
+    "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const postsDiv = document.getElementById("posts");
+  const searchInput = document.getElementById("searchInput");
+  const categoryFilter = document.getElementById("categoryFilter");
+
+  let allPosts = [];
+
+  function renderPosts(posts) {
+    postsDiv.innerHTML = "";
+
+    if (posts.length === 0) {
+      postsDiv.innerHTML = "<p>Sonuç bulunamadı.</p>";
+      return;
+    }
+
+    posts.forEach(data => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <h2>${data.title}</h2>
+        <p class="date">${data.createdAt?.toDate().toLocaleDateString()}</p>
+        <p>${data.content}</p>
+        <small>🎮 ${data.category}</small>
+      `;
+
+      postsDiv.appendChild(card);
+    });
+  }
+
+  function filterPosts() {
+    const search = searchInput.value.toLowerCase();
+    const category = categoryFilter.value;
+
+    const filtered = allPosts.filter(post => {
+      const matchTitle = post.title.toLowerCase().includes(search);
+      const matchCategory =
+        category === "All" || post.category === category;
+
+      return matchTitle && matchCategory;
+    });
+
+    renderPosts(filtered);
+  }
+
+  const q = query(
+    collection(db, "posts"),
+    orderBy("createdAt", "desc")
+  );
+
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    allPosts.push(doc.data());
+  });
+
+  renderPosts(allPosts);
+
+  searchInput.addEventListener("input", filterPosts);
+  categoryFilter.addEventListener("change", filterPosts);
+</script>
+ 
+</body>
+</html>
